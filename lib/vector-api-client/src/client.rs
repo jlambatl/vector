@@ -12,12 +12,23 @@ pub type QueryResult<T> =
 #[derive(Debug)]
 pub struct Client {
     url: Url,
+    api_token: Option<String>,
 }
 
 impl Client {
     /// Returns a new GraphQL query client, bound to the provided URL.
     pub fn new(url: Url) -> Self {
-        Self { url }
+        Self {
+            url,
+            api_token: None,
+        }
+    }
+
+    pub fn with_token(url: Url, token: String) -> Self {
+        Self {
+            url,
+            api_token: Some(token),
+        }
     }
 
     /// Send a health query
@@ -33,9 +44,18 @@ impl Client {
     ) -> QueryResult<T> {
         let client = reqwest::Client::new();
 
-        client
-            .post(self.url.clone())
-            .json(request_body)
+        let mut request = client.post(self.url.clone()).json(request_body);
+
+        if let Some(token) = &self.api_token {
+            let mut headers = reqwest::header::HeaderMap::new();
+            headers.insert(
+                reqwest::header::AUTHORIZATION,
+                format!("{}", token).parse().unwrap(),
+            );
+            request = request.headers(headers);
+        }
+
+        request
             .send()
             .await
             .with_context(|| {

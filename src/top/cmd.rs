@@ -28,7 +28,11 @@ pub async fn cmd(opts: &super::Opts) -> exitcode::ExitCode {
 
     let url = opts.url();
     // Create a new API client for connecting to the local/remote Vector instance.
-    let client = Client::new(url.clone());
+    let client = if let Some(ref token) = opts.api_token {
+        Client::with_token(url.clone(), token.clone())
+    } else {
+        Client::new(url.clone())
+    };
     #[allow(clippy::print_stderr)]
     if client.healthcheck().await.is_err() {
         eprintln!(

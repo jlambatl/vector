@@ -34,6 +34,10 @@ pub struct Opts {
     /// Components IDs to observe (comma-separated; accepts glob patterns)
     #[arg(default_value = "*", value_delimiter(','), short = 'c', long)]
     components: Vec<Pattern>,
+
+    /// API token for authentication
+    #[arg(short = 't', long, env = "VECTOR_PROXY_API_TOKEN")]
+    pub api_token: Option<String>,
 }
 
 impl Opts {
