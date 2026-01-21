@@ -50,7 +50,7 @@ impl Client {
             let mut headers = reqwest::header::HeaderMap::new();
             headers.insert(
                 reqwest::header::AUTHORIZATION,
-                format!("{}", token).parse().unwrap(),
+                token.to_string().parse().unwrap(),
             );
             request = request.headers(headers);
         }
