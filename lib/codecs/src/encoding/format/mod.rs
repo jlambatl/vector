@@ -28,7 +28,7 @@ use std::fmt::Debug;
 pub use arrow::{
     ArrowEncodingError, ArrowStreamSerializer, ArrowStreamSerializerConfig, SchemaProvider,
 };
-pub use avro::{AvroSerializer, AvroSerializerConfig, AvroSerializerOptions};
+pub use avro::{AvroEncoding, AvroSerializer, AvroSerializerConfig, AvroSerializerOptions};
 pub use cef::{CefSerializer, CefSerializerConfig};
 use dyn_clone::DynClone;
 pub use gelf::{GelfSerializer, GelfSerializerConfig};
