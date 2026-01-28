@@ -347,7 +347,7 @@ greptimedb-ingester = { git = "https://github.com/GreptimeTeam/greptimedb-ingest
 # External libs
 arc-swap = { workspace = true, default-features = false, optional = true }
 async-compression = { version = "0.4.27", default-features = false, features = ["tokio", "gzip", "zstd"], optional = true }
-apache-avro = { version = "0.16.0", default-features = false, optional = true }
+apache-avro = { version = "0.21.0", default-features = false, optional = true }
 arrow = { version = "56.2.0", default-features = false, features = ["ipc"], optional = true }
 arrow-schema = { version = "56.2.0", default-features = false, optional = true }
 axum = { version = "0.6.20", default-features = false }
