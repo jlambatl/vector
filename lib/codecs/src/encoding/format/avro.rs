@@ -91,7 +91,7 @@ pub enum AvroEncoding {
 }
 
 /// Serializer that converts an `Event` to bytes using the Apache Avro format.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AvroSerializer {
     schema: apache_avro::Schema,
     encoding: AvroEncoding,
@@ -99,6 +99,17 @@ pub struct AvroSerializer {
     ocf_header_written: bool,
     /// The sync marker used for OCF format (16 bytes).
     sync_marker: [u8; 16],
+}
+
+impl Clone for AvroSerializer {
+    fn clone(&self) -> Self {
+        Self {
+            schema: self.schema.clone(),
+            encoding: self.encoding,
+            ocf_header_written: false, // Each clone starts with header not written
+            sync_marker: self.sync_marker,
+        }
+    }
 }
 
 impl AvroSerializer {
@@ -119,38 +130,38 @@ impl AvroSerializer {
 
     /// Writes the OCF file header to the buffer.
     fn write_ocf_header(&mut self, buffer: &mut BytesMut) -> Result<(), vector_common::Error> {
-        if self.ocf_header_written {
-            return Ok(());
+        // Write header only once per encoder instance
+        if !self.ocf_header_written {
+            self.ocf_header_written = true;
+
+            // OCF magic bytes: 'O', 'b', 'j', 1
+            buffer.put_slice(b"Obj\x01");
+
+            // Build metadata map with schema and codec
+            let mut metadata: std::collections::HashMap<String, apache_avro::types::Value> =
+                std::collections::HashMap::new();
+            metadata.insert(
+                "avro.schema".to_string(),
+                apache_avro::types::Value::Bytes(self.schema.canonical_form().into_bytes()),
+            );
+            metadata.insert(
+                "avro.codec".to_string(),
+                apache_avro::types::Value::Bytes(b"null".to_vec()),
+            );
+
+            // Encode metadata as Avro map
+            let metadata_value = apache_avro::types::Value::Map(metadata);
+            let metadata_schema = apache_avro::Schema::Map(apache_avro::schema::MapSchema {
+                types: Box::new(apache_avro::Schema::Bytes),
+                attributes: Default::default(),
+            });
+            let metadata_bytes = apache_avro::to_avro_datum(&metadata_schema, metadata_value)?;
+            buffer.put_slice(&metadata_bytes);
+
+            // Write 16-byte sync marker
+            buffer.put_slice(&self.sync_marker);
         }
 
-        // OCF magic bytes: 'O', 'b', 'j', 1
-        buffer.put_slice(b"Obj\x01");
-
-        // Build metadata map with schema and codec
-        let mut metadata: std::collections::HashMap<String, apache_avro::types::Value> =
-            std::collections::HashMap::new();
-        metadata.insert(
-            "avro.schema".to_string(),
-            apache_avro::types::Value::Bytes(self.schema.canonical_form().into_bytes()),
-        );
-        metadata.insert(
-            "avro.codec".to_string(),
-            apache_avro::types::Value::Bytes(b"null".to_vec()),
-        );
-
-        // Encode metadata as Avro map
-        let metadata_value = apache_avro::types::Value::Map(metadata);
-        let metadata_schema = apache_avro::Schema::Map(apache_avro::schema::MapSchema {
-            types: Box::new(apache_avro::Schema::Bytes),
-            attributes: Default::default(),
-        });
-        let metadata_bytes = apache_avro::to_avro_datum(&metadata_schema, metadata_value)?;
-        buffer.put_slice(&metadata_bytes);
-
-        // Write 16-byte sync marker
-        buffer.put_slice(&self.sync_marker);
-
-        self.ocf_header_written = true;
         Ok(())
     }
 
