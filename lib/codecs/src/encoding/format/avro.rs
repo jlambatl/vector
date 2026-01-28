@@ -6,6 +6,9 @@ use vector_core::{config::DataType, event::Event, schema};
 
 use crate::encoding::BuildError;
 
+/// OCF (Object Container File) magic bytes: 'O', 'b', 'j', 1
+const OCF_MAGIC_BYTES: &[u8] = b"Obj\x01";
+
 /// Config used to build a `AvroSerializer`.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AvroSerializerConfig {
@@ -135,7 +138,7 @@ impl AvroSerializer {
             self.ocf_header_written = true;
 
             // OCF magic bytes: 'O', 'b', 'j', 1
-            buffer.put_slice(b"Obj\x01");
+            buffer.put_slice(OCF_MAGIC_BYTES);
 
             // Build metadata map with schema and codec
             let mut metadata: std::collections::HashMap<String, apache_avro::types::Value> =
@@ -144,6 +147,9 @@ impl AvroSerializer {
                 "avro.schema".to_string(),
                 apache_avro::types::Value::Bytes(self.schema.canonical_form().into_bytes()),
             );
+            // avro.codec is required by the Avro OCF specification:
+            // https://avro.apache.org/docs/1.11.1/specification/#object-container-files
+            // "null" indicates uncompressed data blocks
             metadata.insert(
                 "avro.codec".to_string(),
                 apache_avro::types::Value::Bytes(b"null".to_vec()),
@@ -292,7 +298,7 @@ mod tests {
 
         let result = bytes.freeze();
         // Verify OCF magic bytes
-        assert_eq!(&result[0..4], b"Obj\x01");
+        assert_eq!(&result[0..4], OCF_MAGIC_BYTES);
         // OCF format includes header, so output should be larger than datum format
         assert!(
             result.len() > 50,
@@ -346,7 +352,7 @@ mod tests {
         );
 
         // Verify OCF magic bytes at start
-        assert_eq!(&bytes[0..4], b"Obj\x01");
+        assert_eq!(&bytes[0..4], OCF_MAGIC_BYTES);
     }
 
     #[test]
