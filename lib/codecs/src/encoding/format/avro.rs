@@ -4,10 +4,14 @@ use tokio_util::codec::Encoder;
 use vector_config::configurable_component;
 use vector_core::{config::DataType, event::Event, schema};
 
+use crate::avro::AvroEncoding;
 use crate::encoding::BuildError;
 
 /// OCF (Object Container File) magic bytes: 'O', 'b', 'j', 1
 const OCF_MAGIC_BYTES: &[u8] = b"Obj\x01";
+const OCF_SYNC_MARKER: [u8; 16] = [
+    0xc3, 0x01, 0x95, 0x6a, 0x7c, 0x8e, 0x4d, 0xb2, 0xa1, 0x3f, 0x5c, 0x72, 0x0e, 0x9d, 0x4b, 0x8f,
+];
 
 /// Config used to build a `AvroSerializer`.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -73,26 +77,6 @@ pub struct AvroSerializerOptions {
     pub encoding: AvroEncoding,
 }
 
-/// Specifies the Avro encoding format for serialization output.
-#[configurable_component]
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum AvroEncoding {
-    /// Single-object datum encoding.
-    ///
-    /// Each event is encoded as a standalone Avro datum without container metadata.
-    /// This is the default encoding for backward compatibility.
-    #[default]
-    Datum,
-
-    /// Object Container File encoding.
-    ///
-    /// Writes data in Avro Object Container File format, which embeds the schema
-    /// in the output and organizes records into data blocks. This format is suitable
-    /// for file-based storage such as S3 or local disk.
-    ObjectContainerFile,
-}
-
 /// Serializer that converts an `Event` to bytes using the Apache Avro format.
 #[derive(Debug)]
 pub struct AvroSerializer {
@@ -118,16 +102,11 @@ impl Clone for AvroSerializer {
 impl AvroSerializer {
     /// Creates a new `AvroSerializer`.
     pub fn new(schema: apache_avro::Schema, encoding: AvroEncoding) -> Self {
-        // Generate a fixed sync marker for OCF format
-        let sync_marker: [u8; 16] = [
-            0xc3, 0x01, 0x95, 0x6a, 0x7c, 0x8e, 0x4d, 0xb2, 0xa1, 0x3f, 0x5c, 0x72, 0x0e, 0x9d,
-            0x4b, 0x8f,
-        ];
         Self {
             schema,
             encoding,
             ocf_header_written: false,
-            sync_marker,
+            sync_marker: OCF_SYNC_MARKER,
         }
     }
 
