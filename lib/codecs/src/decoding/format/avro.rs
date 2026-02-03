@@ -487,4 +487,68 @@ mod tests {
             &VrlValue::from(uuid)
         );
     }
+
+    #[test]
+    fn deserialize_avro_ocf() {
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        let schema = get_schema();
+
+        // Create test data and write to OCF file
+        let records = vec![
+            Log {
+                message: "first message".to_owned(),
+            },
+            Log {
+                message: "second message".to_owned(),
+            },
+            Log {
+                message: "third message".to_owned(),
+            },
+        ];
+
+        // Write OCF file using apache_avro library
+        let mut ocf_file = NamedTempFile::new().unwrap();
+        let mut writer = apache_avro::Writer::new(&schema, Vec::new());
+
+        for record in &records {
+            let record_value = apache_avro::to_value(record.clone()).unwrap();
+            writer.append(record_value).unwrap();
+        }
+
+        let ocf_data = writer.into_inner().unwrap();
+        ocf_file.write_all(&ocf_data).unwrap();
+        ocf_file.flush().unwrap();
+
+        // Now test the deserializer with OCF encoding
+        let ocf_bytes = std::fs::read(ocf_file.path()).unwrap();
+
+        // Use the AvroDeserializer to parse the OCF file
+        let deserializer = AvroDeserializer::new(
+            None, // No schema needed for OCF with embedded schema
+            false,
+            AvroEncoding::ObjectContainerFile,
+            AvroSchemaSource::Embedded,
+        );
+
+        let events = deserializer
+            .parse(Bytes::from(ocf_bytes), LogNamespace::Vector)
+            .unwrap();
+
+        // Validate that all 3 records were deserialized
+        assert_eq!(events.len(), 3);
+        assert_eq!(
+            events[0].as_log().get("message").unwrap(),
+            &VrlValue::from("first message")
+        );
+        assert_eq!(
+            events[1].as_log().get("message").unwrap(),
+            &VrlValue::from("second message")
+        );
+        assert_eq!(
+            events[2].as_log().get("message").unwrap(),
+            &VrlValue::from("third message")
+        );
+    }
 }
