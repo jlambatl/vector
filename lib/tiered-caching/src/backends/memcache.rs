@@ -149,10 +149,7 @@ impl CacheTable for MemcacheCacheTable {
         if let Some(ref json_val) = value {
             // Backfill L1 on L2 hit.
             let ttl = self.strategy.to_duration();
-            let _ = self
-                .l1_cache
-                .set_with_ttl(key, json_val.clone(), ttl)
-                .await;
+            let _ = self.l1_cache.set_with_ttl(key, json_val.clone(), ttl).await;
         }
 
         match value {
