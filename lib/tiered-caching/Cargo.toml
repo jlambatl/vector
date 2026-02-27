@@ -1,0 +1,20 @@
+[package]
+name = "tiered-caching"
+version = "0.1.0"
+authors = ["Vector Contributors <vector@datadoghq.com>"]
+edition = "2024"
+publish = false
+
+[lints.clippy]
+unwrap-used = "deny"
+
+[dependencies]
+arc-swap.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+vrl.workspace = true
+multi-tier-cache = { version = "0.5", features = ["backend-memcached"] }

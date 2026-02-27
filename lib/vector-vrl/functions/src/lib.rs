@@ -49,5 +49,7 @@ pub fn all() -> Vec<Box<dyn Function>> {
     #[cfg(feature = "vrl-metrics")]
     let functions = functions.chain(vector_vrl_metrics::all());
 
+    let functions = functions.chain(tiered_caching::vrl_functions());
+
     functions.collect()
 }

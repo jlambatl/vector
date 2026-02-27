@@ -119,6 +119,7 @@ members = [
   "lib/loki-logproto",
   "lib/prometheus-parser",
   "lib/opentelemetry-proto",
+  "lib/tiered-caching",
   "lib/tracing-limit",
   "lib/vector-api-client",
   "lib/vector-buffers",
@@ -247,6 +248,7 @@ vector-config-common.workspace = true
 vector-config-macros.workspace = true
 vector-vrl-functions = { workspace = true, features = ["vrl-metrics"] }
 vector-vrl-metrics = { path = "lib/vector-vrl-metrics" }
+tiered-caching = { path = "lib/tiered-caching" }
 loki-logproto = { path = "lib/loki-logproto", optional = true }
 
 # Tokio / Futures
@@ -510,7 +512,7 @@ docs = ["enable-unix"]
 default-cmake = ["enable-unix", "rdkafka?/gssapi-vendored", "rdkafka?/cmake_build"]
 # Default features for *-pc-windows-msvc
 # TODO: Enable SASL https://github.com/vectordotdev/vector/pull/3081#issuecomment-659298042
-base = ["api", "enrichment-tables", "sinks", "sources", "transforms", "secrets"]
+base = ["api", "caches", "enrichment-tables", "sinks", "sources", "transforms", "secrets"]
 enable-api-client = ["base", "api-client"]
 enable-unix = ["enable-api-client", "sources-dnstap", "unix"]
 
@@ -591,6 +593,7 @@ protobuf-build = ["dep:tonic-build", "dep:prost-build"]
 gcp = ["dep:base64", "dep:goauth", "dep:smpl_jwt"]
 
 # Enrichment Tables
+caches = []
 enrichment-tables = ["enrichment-tables-geoip", "enrichment-tables-mmdb", "enrichment-tables-memory"]
 enrichment-tables-geoip = ["dep:maxminddb"]
 enrichment-tables-mmdb = ["dep:maxminddb"]
@@ -1155,3 +1158,8 @@ name = "codecs"
 path = "benches/codecs/main.rs"
 harness = false
 required-features = ["codecs-benches"]
+
+[[bench]]
+name = "cache"
+harness = false
+required-features = ["caches"]

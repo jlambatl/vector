@@ -6,7 +6,7 @@ use vector_lib::{config::GlobalOptions, configurable::configurable_component};
 #[cfg(feature = "api")]
 use super::api;
 use super::{
-    BoxedSink, BoxedSource, BoxedTransform, ComponentKey, Config, EnrichmentTableOuter,
+    BoxedSink, BoxedSource, BoxedTransform, CacheOuter, ComponentKey, Config, EnrichmentTableOuter,
     HealthcheckOptions, SinkOuter, SourceOuter, TestDefinition, TransformOuter, compiler, schema,
 };
 use crate::{enrichment_tables::EnrichmentTables, providers::Providers, secrets::SecretBackends};
@@ -36,6 +36,10 @@ pub struct ConfigBuilder {
     /// All configured enrichment tables.
     #[serde(default)]
     pub enrichment_tables: IndexMap<ComponentKey, EnrichmentTableOuter<String>>,
+
+    /// All configured caches.
+    #[serde(default)]
+    pub caches: IndexMap<ComponentKey, CacheOuter>,
 
     /// All configured sources.
     #[serde(default)]
@@ -85,6 +89,7 @@ impl From<Config> for ConfigBuilder {
             schema,
             healthchecks,
             enrichment_tables,
+            caches,
             sources,
             sinks,
             transforms,
@@ -117,6 +122,7 @@ impl From<Config> for ConfigBuilder {
             schema,
             healthchecks,
             enrichment_tables,
+            caches,
             sources,
             sinks,
             transforms,
@@ -231,6 +237,11 @@ impl ConfigBuilder {
                 errors.push(format!("duplicate enrichment_table name found: {k}"));
             }
         });
+        with.caches.keys().for_each(|k| {
+            if self.caches.contains_key(k) {
+                errors.push(format!("duplicate cache name found: {k}"));
+            }
+        });
         with.sources.keys().for_each(|k| {
             if self.sources.contains_key(k) {
                 errors.push(format!("duplicate source id found: {k}"));
@@ -261,6 +272,7 @@ impl ConfigBuilder {
         }
 
         self.enrichment_tables.extend(with.enrichment_tables);
+        self.caches.extend(with.caches);
         self.sources.extend(with.sources);
         self.sinks.extend(with.sinks);
         self.transforms.extend(with.transforms);

@@ -10,6 +10,7 @@ license = "MPL-2.0"
 indoc.workspace = true
 vrl.workspace = true
 enrichment = { path = "../../enrichment" }
+tiered-caching = { path = "../../tiered-caching" }
 dnstap-parser = { path = "../../dnstap-parser", optional = true }
 vector-vrl-metrics = { path = "../../vector-vrl-metrics", optional = true }
 vector-vrl-category.workspace = true

@@ -29,6 +29,7 @@ use crate::{
 
 pub mod api;
 mod builder;
+mod cache;
 mod cmd;
 mod compiler;
 mod diff;
@@ -49,6 +50,7 @@ mod vars;
 pub mod watcher;
 
 pub use builder::ConfigBuilder;
+pub use cache::CacheOuter;
 pub use cmd::{Opts, cmd};
 pub use diff::ConfigDiff;
 pub use enrichment_table::{EnrichmentTableConfig, EnrichmentTableOuter};
@@ -155,6 +157,8 @@ pub struct Config {
     sinks: IndexMap<ComponentKey, SinkOuter<OutputId>>,
     transforms: IndexMap<ComponentKey, TransformOuter<OutputId>>,
     pub enrichment_tables: IndexMap<ComponentKey, EnrichmentTableOuter<OutputId>>,
+    /// All configured caches.
+    pub caches: IndexMap<ComponentKey, CacheOuter>,
     tests: Vec<TestDefinition>,
     secret: IndexMap<ComponentKey, SecretBackends>,
     pub graceful_shutdown_duration: Option<Duration>,

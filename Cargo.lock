@@ -3230,6 +3230,19 @@ checksum = "06d2e3287df1c007e74221c49ca10a95d557349e54b3a75dc2fb14712c751f04"
 
 [[package]]
 name = "dashmap"
+version = "5.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
+dependencies = [
+ "cfg-if",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core 0.9.12",
+]
+
+[[package]]
+name = "dashmap"
 version = "6.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
@@ -4074,7 +4087,7 @@ dependencies = [
  "bytes 1.11.1",
  "chrono",
  "crc",
- "dashmap",
+ "dashmap 6.1.0",
  "glob",
  "libc",
  "quickcheck",
@@ -4494,7 +4507,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9efcab3c1958580ff1f25a2a41be1668f7603d849bb63af523b208a3cc1223b8"
 dependencies = [
  "cfg-if",
- "dashmap",
+ "dashmap 6.1.0",
  "futures-sink",
  "futures-timer",
  "futures-util",
@@ -4586,7 +4599,7 @@ name = "greptimedb-ingester"
 version = "0.1.0"
 source = "git+https://github.com/GreptimeTeam/greptimedb-ingester-rust?rev=f7243393808640f5123b0d5b7b798da591a4df6e#f7243393808640f5123b0d5b7b798da591a4df6e"
 dependencies = [
- "dashmap",
+ "dashmap 6.1.0",
  "derive_builder",
  "enum_dispatch",
  "futures 0.3.31",
@@ -6630,6 +6643,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "memcache"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0396084c5d5e2ef2c480a51933b56e9673898f14657212eebbffcbcc12c7153a"
+dependencies = [
+ "byteorder",
+ "enum_dispatch",
+ "openssl",
+ "r2d2",
+ "rand 0.8.5",
+ "url",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6922,6 +6949,25 @@ dependencies = [
  "mime",
  "spin 0.9.8",
  "version_check",
+]
+
+[[package]]
+name = "multi-tier-cache"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "304bf95a082ee1255455a513d3c69e4ac9cf9968a35d26cd2f4c54bc83a1d08c"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "dashmap 5.5.3",
+ "futures-util",
+ "memcache",
+ "moka",
+ "redis",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing 0.1.44",
 ]
 
 [[package]]
@@ -8802,6 +8848,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
 
 [[package]]
+name = "r2d2"
+version = "0.8.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51de85fb3fb6524929c8a2eb85e6b6d363de4e8c48f9e2c2eac4944abc181c93"
+dependencies = [
+ "log",
+ "parking_lot 0.12.5",
+ "scheduled-thread-pool",
+]
+
+[[package]]
 name = "radium"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9066,6 +9123,7 @@ dependencies = [
  "pin-project-lite",
  "rand 0.9.2",
  "ryu",
+ "sha1_smol",
  "socket2 0.6.0",
  "tokio",
  "tokio-native-tls",
@@ -9840,6 +9898,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "scheduled-thread-pool"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cbc66816425a074528352f5789333ecff06ca41b36b0b0efdfbb29edc391a19"
+dependencies = [
+ "parking_lot 0.12.5",
+]
+
+[[package]]
 name = "schemars"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10223,6 +10290,12 @@ dependencies = [
  "cpufeatures",
  "digest",
 ]
+
+[[package]]
+name = "sha1_smol"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbfa15b3dddfee50a0fff136974b3e1bde555604ba463834a7eb7deb6417705d"
 
 [[package]]
 name = "sha2"
@@ -11197,6 +11270,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "tiered-caching"
+version = "0.1.0"
+dependencies = [
+ "arc-swap",
+ "async-trait",
+ "futures 0.3.31",
+ "multi-tier-cache",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing 0.1.44",
+ "vrl",
+]
+
+[[package]]
 name = "tikv-jemalloc-sys"
 version = "0.6.1+5.3.0-1-ge13ca993e8ccb9ba9847cc330696e02839f328f7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11927,7 +12015,7 @@ name = "tracing-limit"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "dashmap",
+ "dashmap 6.1.0",
  "mock_instant",
  "serial_test",
  "tracing 0.1.44",
@@ -12635,6 +12723,7 @@ dependencies = [
  "tempfile",
  "test-generator",
  "thread_local",
+ "tiered-caching",
  "tikv-jemallocator",
  "tokio",
  "tokio-openssl",
@@ -12705,7 +12794,7 @@ dependencies = [
  "criterion",
  "crossbeam-queue",
  "crossbeam-utils",
- "dashmap",
+ "dashmap 6.1.0",
  "derivative",
  "fslock",
  "futures 0.3.31",
@@ -13024,6 +13113,7 @@ dependencies = [
  "dnstap-parser",
  "enrichment",
  "indoc",
+ "tiered-caching",
  "vector-vrl-category",
  "vector-vrl-metrics",
  "vrl",

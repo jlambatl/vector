@@ -57,6 +57,8 @@ use crate::{
 
 static ENRICHMENT_TABLES: LazyLock<vector_lib::enrichment::TableRegistry> =
     LazyLock::new(vector_lib::enrichment::TableRegistry::default);
+static CACHE_REGISTRY: LazyLock<tiered_caching::CacheRegistry> =
+    LazyLock::new(tiered_caching::CacheRegistry::default);
 static METRICS_STORAGE: LazyLock<MetricsStorage> = LazyLock::new(MetricsStorage::default);
 
 pub(crate) static SOURCE_SENDER_BUFFER_SIZE: LazyLock<usize> =
@@ -126,6 +128,7 @@ impl<'a> Builder<'a> {
     /// Builds the new pieces of the topology found in `self.diff`.
     async fn build(mut self) -> Result<TopologyPieces, Vec<String>> {
         let enrichment_tables = self.load_enrichment_tables().await;
+        self.load_caches().await;
         let source_tasks = self.build_sources(enrichment_tables).await;
         self.build_transforms(enrichment_tables).await;
         self.build_sinks(enrichment_tables).await;
@@ -869,6 +872,28 @@ impl<'a> Builder<'a> {
 
         (task, outputs)
     }
+
+    /// Loads caches from config into the global CACHE_REGISTRY.
+    async fn load_caches(&mut self) {
+        let mut caches = std::collections::HashMap::new();
+
+        for (name, cache_outer) in self.config.caches.iter() {
+            let cache_name = name.to_string();
+            debug!(cache = %cache_name, "Building cache.");
+
+            match cache_outer.inner.build().await {
+                Ok(table) => {
+                    caches.insert(cache_name, std::sync::Arc::from(table));
+                }
+                Err(error) => {
+                    self.errors.push(format!("Cache \"{name}\": {error}"));
+                }
+            }
+        }
+
+        CACHE_REGISTRY.load(caches);
+        CACHE_REGISTRY.finish_load();
+    }
 }
 
 async fn run_source_output_pump(
@@ -907,6 +932,31 @@ async fn run_source_output_pump(
 
     debug!("Source pump finished normally.");
     Ok(TaskOutput::Source)
+}
+
+/// Reload caches from config during a hot reload.
+pub async fn reload_caches(config: &Config) {
+    let mut caches = std::collections::HashMap::new();
+
+    for (name, cache_outer) in config.caches.iter() {
+        let cache_name = name.to_string();
+        match cache_outer.inner.build().await {
+            Ok(table) => {
+                caches.insert(cache_name, std::sync::Arc::from(table));
+            }
+            Err(error) => {
+                error!(message = "Cache reload failed.", cache = %cache_name, %error);
+            }
+        }
+    }
+
+    CACHE_REGISTRY.load(caches);
+    CACHE_REGISTRY.finish_load();
+}
+
+/// Get a readonly reference to the global cache registry for use in VRL context.
+pub fn cache_registry_search() -> tiered_caching::CacheSearch {
+    CACHE_REGISTRY.as_readonly()
 }
 
 pub async fn reload_enrichment_tables(config: &Config) {
