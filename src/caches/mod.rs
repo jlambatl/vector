@@ -29,6 +29,14 @@ pub enum CacheBackendType {
 /// Caches provide multi-tier caching with a fast in-memory L1 layer
 /// and a distributed L2 backend (Redis or Memcache). Caches are accessed
 /// from VRL using the `cache_get`, `cache_set`, and `cache_remove` functions.
+///
+/// ## Reload behavior
+///
+/// When Vector's configuration is reloaded, all caches are rebuilt from scratch.
+/// The in-memory L1 cache is reset (all cached entries are lost), causing a
+/// temporary increase in latency until the cache warms up again. Data stored in
+/// L2 backends (Redis or Memcache) persists on the server and remains available
+/// after reload, though client connections are re-established.
 #[configurable_component(global_option("caches"))]
 #[derive(Clone, Debug)]
 pub struct CacheInstanceConfig {

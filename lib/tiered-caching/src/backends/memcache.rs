@@ -1,9 +1,15 @@
 //! Memcache-backed cache table implementation.
+//!
+//! Unlike the Redis backend, `MemcachedCache` does not implement the `L2CacheBackend`
+//! trait (because Memcache does not support TTL introspection), so it cannot be used
+//! with `CacheManager`. This backend manually coordinates L1 (in-memory) and L2
+//! (Memcache) tiers.
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use multi_tier_cache::{CacheBackend, CacheStrategy, MemcachedCache, MokaCache, MokaCacheConfig};
+use tracing::warn;
 use vrl::value::Value;
 
 use crate::{CacheError, CacheResult, CacheTable, json_to_vrl, map_ttl_to_strategy, vrl_to_json};
@@ -20,9 +26,9 @@ static MEMCACHE_INIT_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 pub struct MemcacheCacheConfig {
     /// Memcache server addresses (e.g., "localhost:11211" or "server1:11211,server2:11211")
     pub servers: String,
-    /// Moka L1 cache capacity (number of entries)
+    /// L1 in-memory cache capacity (number of entries)
     pub l1_capacity: u64,
-    /// Moka L1 cache time-to-live
+    /// L1 in-memory cache time-to-live
     pub l1_ttl: Duration,
     /// Default cache strategy (TTL for new entries)
     pub cache_strategy: CacheStrategy,
@@ -39,7 +45,19 @@ impl Default for MemcacheCacheConfig {
     }
 }
 
-/// Memcache cache table wrapping multi-tier-cache.
+/// Memcache cache table with manual L1↔L2 coordination.
+///
+/// `MemcachedCache` does not implement `L2CacheBackend` (Memcache lacks TTL
+/// introspection), so this backend cannot use `CacheManager`. Instead, it
+/// manually coordinates the in-memory L1 and Memcache L2 tiers:
+///
+/// - **get**: Check L1 first; on miss, check L2 and backfill L1 on hit.
+/// - **set**: Write to both L1 and L2.
+/// - **remove**: Invalidate from both L1 and L2.
+///
+/// The `CacheBackend::get()` method on `MemcachedCache` returns `Option` (not
+/// `Result`), so L2 connection errors are treated as cache misses. A warning is
+/// logged when L2 appears unhealthy so operators can detect backend problems.
 #[derive(Clone)]
 pub struct MemcacheCacheTable {
     l1_cache: Arc<MokaCache>,
@@ -101,12 +119,12 @@ impl MemcacheCacheTable {
                 }
             }
 
-            result?
+            Arc::new(result?)
         };
 
         Ok(Self {
             l1_cache,
-            l2_cache: Arc::new(l2_cache),
+            l2_cache,
             strategy: config.cache_strategy,
         })
     }
@@ -115,14 +133,26 @@ impl MemcacheCacheTable {
 #[async_trait::async_trait]
 impl CacheTable for MemcacheCacheTable {
     async fn get(&self, key: &str) -> CacheResult<Option<Value>> {
+        // Check L1 first (fast path).
         if let Some(json_val) = self.l1_cache.get(key).await {
             return Ok(Some(json_to_vrl(json_val)?));
         }
 
+        // L1 miss — check L2. Note: `CacheBackend::get()` on MemcachedCache returns
+        // `Option<Value>`, not `Result`. Connection errors are treated as misses.
+        // We check health to log warnings about backend problems.
         let value = self.l2_cache.get(key).await;
+        if value.is_none() && !self.l2_cache.health_check().await {
+            warn!(message = "Memcache L2 backend may be unavailable.", key = %key);
+        }
+
         if let Some(ref json_val) = value {
+            // Backfill L1 on L2 hit.
             let ttl = self.strategy.to_duration();
-            let _ = self.l1_cache.set_with_ttl(key, json_val.clone(), ttl).await;
+            let _ = self
+                .l1_cache
+                .set_with_ttl(key, json_val.clone(), ttl)
+                .await;
         }
 
         match value {

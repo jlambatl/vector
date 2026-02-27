@@ -1,11 +1,11 @@
 //! Tiered caching library integration for Vector.
 //!
 //! Provides a pluggable, multi-tier cache abstraction with support for multiple backends
-//! (Redis, Memcache) and a fast in-memory L1 tier (Moka).
+//! (Redis, Memcache) and a fast in-memory L1 tier.
 //!
 //! # Architecture
 //!
-//! - **L1 Tier**: In-memory cache (Moka) - sub-millisecond latency
+//! - **L1 Tier**: In-memory cache - sub-millisecond latency
 //! - **L2 Tier**: Distributed cache (Redis/Memcache) - persistent across instances
 //! - **Compute-on-Miss**: Applications implement their own logic in VRL/transforms
 //! - **No Invalidation (v1)**: TTL-based expiry only, no cross-instance invalidation

@@ -15,9 +15,9 @@ use crate::{CacheError, CacheResult, CacheTable, json_to_vrl, map_ttl_to_strateg
 pub struct RedisCacheConfig {
     /// Redis URL (e.g., "redis://localhost:6379")
     pub redis_url: String,
-    /// Moka L1 cache capacity (number of entries)
+    /// L1 in-memory cache capacity (number of entries)
     pub l1_capacity: u64,
-    /// Moka L1 cache time-to-live
+    /// L1 in-memory cache time-to-live
     pub l1_ttl: Duration,
     /// Default cache strategy (TTL for new entries)
     pub cache_strategy: CacheStrategy,
@@ -35,6 +35,11 @@ impl Default for RedisCacheConfig {
 }
 
 /// Redis cache table wrapping multi-tier-cache.
+///
+/// Data operations (`get`, `set`, `remove`) are delegated to the `CacheManager`
+/// which handles L1↔L2 coordination including read-through, write-through,
+/// and invalidation across tiers. Health checks use the underlying backends
+/// directly since `CacheManager` does not expose a health check API.
 #[derive(Clone)]
 pub struct RedisCacheTable {
     cache: Arc<CacheManager>,
@@ -115,17 +120,10 @@ impl CacheTable for RedisCacheTable {
     }
 
     async fn remove(&self, key: &str) -> CacheResult<()> {
-        self.l1_cache
-            .remove(key)
+        self.cache
+            .invalidate(key)
             .await
-            .map_err(|e| CacheError::Other(e.to_string()))?;
-
-        self.l2_cache
-            .remove(key)
-            .await
-            .map_err(|e| CacheError::Other(e.to_string()))?;
-
-        Ok(())
+            .map_err(|e| CacheError::Other(e.to_string()))
     }
 
     async fn health_check(&self) -> bool {

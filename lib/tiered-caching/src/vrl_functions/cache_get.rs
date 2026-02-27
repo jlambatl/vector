@@ -116,7 +116,7 @@ impl FunctionExpression for CacheGetFn {
             .map_err(|e| ExpressionError::from(e.to_string()))?;
 
         // Use block_on for synchronous VRL execution.
-        // The tiered-caching library handles L1 (Moka, in-process) and L2 (Redis/Memcache)
+        // The tiered-caching library handles L1 (in-process) and L2 (Redis/Memcache)
         // coordination. L1 hits are fast and do not actually block.
         let result = futures::executor::block_on(cache_ref.get(&key))
             .map_err(|e| ExpressionError::from(e.to_string()))?;

@@ -6,6 +6,10 @@ use crate::caches::CacheInstanceConfig;
 ///
 /// Unlike enrichment tables, caches are not part of the data flow graph.
 /// They are accessed on-demand from VRL functions.
+///
+/// On configuration reload, all caches are rebuilt. The in-memory L1 layer is
+/// reset (warm data is lost), while L2 data (Redis/Memcache) persists on the
+/// server.
 #[configurable_component]
 #[derive(Clone, Debug)]
 pub struct CacheOuter {
