@@ -318,6 +318,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arcstr"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03918c3dbd7701a85c6b9887732e2921175f26c350b4563841d0958c21d57e6d"
+
+[[package]]
 name = "arr_macro"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1784,9 +1790,9 @@ dependencies = [
 
 [[package]]
 name = "backon"
-version = "1.5.2"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "592277618714fbcecda9a02ba7a8781f319d26532a88553bbacc77ba5d2b3a8d"
+checksum = "cffb0e931875b666fc4fcb20fee52e9bbd1ef836fd9e9e04ec21555f9f85f7ef"
 dependencies = [
  "fastrand 2.3.0",
  "gloo-timers",
@@ -3230,19 +3236,6 @@ checksum = "06d2e3287df1c007e74221c49ca10a95d557349e54b3a75dc2fb14712c751f04"
 
 [[package]]
 name = "dashmap"
-version = "5.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
-dependencies = [
- "cfg-if",
- "hashbrown 0.14.5",
- "lock_api",
- "once_cell",
- "parking_lot_core 0.9.12",
-]
-
-[[package]]
-name = "dashmap"
 version = "6.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
@@ -4087,7 +4080,7 @@ dependencies = [
  "bytes 1.11.1",
  "chrono",
  "crc",
- "dashmap 6.1.0",
+ "dashmap",
  "glob",
  "libc",
  "quickcheck",
@@ -4507,7 +4500,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9efcab3c1958580ff1f25a2a41be1668f7603d849bb63af523b208a3cc1223b8"
 dependencies = [
  "cfg-if",
- "dashmap 6.1.0",
+ "dashmap",
  "futures-sink",
  "futures-timer",
  "futures-util",
@@ -4599,7 +4592,7 @@ name = "greptimedb-ingester"
 version = "0.1.0"
 source = "git+https://github.com/GreptimeTeam/greptimedb-ingester-rust?rev=f7243393808640f5123b0d5b7b798da591a4df6e#f7243393808640f5123b0d5b7b798da591a4df6e"
 dependencies = [
- "dashmap 6.1.0",
+ "dashmap",
  "derive_builder",
  "enum_dispatch",
  "futures 0.3.31",
@@ -6644,9 +6637,9 @@ dependencies = [
 
 [[package]]
 name = "memcache"
-version = "0.17.2"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0396084c5d5e2ef2c480a51933b56e9673898f14657212eebbffcbcc12c7153a"
+checksum = "1c48ab5486280b74dc4e8b2fb4a556f823ff856dd6b6bb10276840f5260d1f6f"
 dependencies = [
  "byteorder",
  "enum_dispatch",
@@ -6953,17 +6946,16 @@ dependencies = [
 
 [[package]]
 name = "multi-tier-cache"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "304bf95a082ee1255455a513d3c69e4ac9cf9968a35d26cd2f4c54bc83a1d08c"
+version = "0.6.0"
+source = "git+https://github.com/jlambatl/multi-tier-cache.git?branch=master#d14764f515ffbadd054b2dcd8eb3347ce264e9cc"
 dependencies = [
  "anyhow",
  "async-trait",
- "dashmap 5.5.3",
+ "dashmap",
  "futures-util",
  "memcache",
  "moka",
- "redis",
+ "redis 1.0.4",
  "serde",
  "serde_json",
  "tokio",
@@ -9123,12 +9115,38 @@ dependencies = [
  "pin-project-lite",
  "rand 0.9.2",
  "ryu",
- "sha1_smol",
  "socket2 0.6.0",
  "tokio",
  "tokio-native-tls",
  "tokio-util",
  "url",
+]
+
+[[package]]
+name = "redis"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbe7f6e08ce1c6a9b21684e643926f6fc3b683bc006cb89afd72a5e0eb16e3a2"
+dependencies = [
+ "arc-swap",
+ "arcstr",
+ "backon",
+ "bytes 1.11.1",
+ "cfg-if",
+ "combine 4.6.6",
+ "futures-channel",
+ "futures-util",
+ "itoa",
+ "num-bigint",
+ "percent-encoding",
+ "pin-project-lite",
+ "ryu",
+ "sha1_smol",
+ "socket2 0.6.0",
+ "tokio",
+ "tokio-util",
+ "url",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -12015,7 +12033,7 @@ name = "tracing-limit"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "dashmap 6.1.0",
+ "dashmap",
  "mock_instant",
  "serial_test",
  "tracing 0.1.44",
@@ -12690,7 +12708,7 @@ dependencies = [
  "rand 0.9.2",
  "rand_distr",
  "rdkafka",
- "redis",
+ "redis 0.32.5",
  "regex",
  "reqwest 0.11.26",
  "reqwest 0.12.28",
@@ -12794,7 +12812,7 @@ dependencies = [
  "criterion",
  "crossbeam-queue",
  "crossbeam-utils",
- "dashmap 6.1.0",
+ "dashmap",
  "derivative",
  "fslock",
  "futures 0.3.31",

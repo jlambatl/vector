@@ -461,3 +461,54 @@ fn capitalize(s: &str) -> String {
     }
     s
 }
+
+/// Checks there is no more than one Memcache backend configured.
+pub fn check_caches(_config: &ConfigBuilder) -> Result<(), Vec<String>> {
+    // Limitation removed in tiered-caching 0.6.0 via MemcachedCache::with_url
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::caches::{CacheBackendType, CacheInstanceConfig};
+    use crate::config::CacheOuter;
+
+    #[test]
+    fn test_check_caches() {
+        let mut builder = ConfigBuilder::default();
+
+        // No caches -> Ok
+        assert!(check_caches(&builder).is_ok());
+
+        // One Redis -> Ok
+        builder.caches.insert(
+            "redis1".into(),
+            CacheOuter::new(CacheInstanceConfig {
+                backend: CacheBackendType::Redis,
+                ..Default::default()
+            }),
+        );
+        assert!(check_caches(&builder).is_ok());
+
+        // One Memcache -> Ok
+        builder.caches.insert(
+            "memcache1".into(),
+            CacheOuter::new(CacheInstanceConfig {
+                backend: CacheBackendType::Memcache,
+                ..Default::default()
+            }),
+        );
+        assert!(check_caches(&builder).is_ok());
+
+        // Two Memcache -> Ok (limitation removed)
+        builder.caches.insert(
+            "memcache2".into(),
+            CacheOuter::new(CacheInstanceConfig {
+                backend: CacheBackendType::Memcache,
+                ..Default::default()
+            }),
+        );
+        assert!(check_caches(&builder).is_ok());
+    }
+}

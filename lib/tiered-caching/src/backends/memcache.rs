@@ -14,13 +14,6 @@ use vrl::value::Value;
 
 use crate::{CacheError, CacheResult, CacheTable, json_to_vrl, map_ttl_to_strategy, vrl_to_json};
 
-/// Global mutex to serialize Memcache cache construction.
-///
-/// `MemcachedCache::new()` reads from the `MEMCACHED_URL` environment variable.
-/// Since environment variable manipulation is not thread-safe, we serialize
-/// construction behind this mutex.
-static MEMCACHE_INIT_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
 /// Configuration for a Memcache-backed cache.
 #[derive(Clone, Debug)]
 pub struct MemcacheCacheConfig {
@@ -72,12 +65,6 @@ impl MemcacheCacheTable {
     ///
     /// Returns `CacheError::ConnectionError` if no servers are configured or if
     /// the Memcache client fails to initialize.
-    ///
-    /// # Safety
-    ///
-    /// This method temporarily sets the `MEMCACHED_URL` environment variable
-    /// because `MemcachedCache::new()` only supports configuration via env var.
-    /// A global mutex serializes construction to prevent race conditions.
     pub async fn new(config: MemcacheCacheConfig) -> CacheResult<Self> {
         if config.servers.is_empty() {
             return Err(CacheError::ConnectionError(
@@ -94,33 +81,10 @@ impl MemcacheCacheTable {
         let l1_cache =
             Arc::new(MokaCache::new(moka_config).map_err(|e| CacheError::Other(e.to_string()))?);
 
-        // Serialize Memcache construction to avoid env var race conditions.
-        let l2_cache = {
-            let _guard = MEMCACHE_INIT_MUTEX
-                .lock()
-                .unwrap_or_else(|poison| poison.into_inner());
-
-            let previous_url = std::env::var("MEMCACHED_URL").ok();
-
-            // SAFETY: Protected by MEMCACHE_INIT_MUTEX to prevent concurrent env var access.
-            unsafe {
-                std::env::set_var("MEMCACHED_URL", &config.servers);
-            }
-
-            let result =
-                MemcachedCache::new().map_err(|e| CacheError::ConnectionError(e.to_string()));
-
-            // Restore previous env var state.
-            unsafe {
-                if let Some(value) = previous_url {
-                    std::env::set_var("MEMCACHED_URL", value);
-                } else {
-                    std::env::remove_var("MEMCACHED_URL");
-                }
-            }
-
-            Arc::new(result?)
-        };
+        let l2_cache = Arc::new(
+            MemcachedCache::with_url(&config.servers)
+                .map_err(|e| CacheError::ConnectionError(e.to_string()))?,
+        );
 
         Ok(Self {
             l1_cache,
@@ -134,26 +98,32 @@ impl MemcacheCacheTable {
 impl CacheTable for MemcacheCacheTable {
     async fn get(&self, key: &str) -> CacheResult<Option<Value>> {
         // Check L1 first (fast path).
-        if let Some(json_val) = self.l1_cache.get(key).await {
+        if let Some(bytes) = self.l1_cache.get(key).await {
+            let json_val: serde_json::Value = serde_json::from_slice(&bytes)
+                .map_err(|e| CacheError::Other(format!("L1 Deserialization error: {}", e)))?;
             return Ok(Some(json_to_vrl(json_val)?));
         }
 
         // L1 miss — check L2. Note: `CacheBackend::get()` on MemcachedCache returns
         // `Option<Value>`, not `Result`. Connection errors are treated as misses.
         // We check health to log warnings about backend problems.
-        let value = self.l2_cache.get(key).await;
-        if value.is_none() && !self.l2_cache.health_check().await {
+        let value_bytes = self.l2_cache.get(key).await;
+        if value_bytes.is_none() && !self.l2_cache.health_check().await {
             warn!(message = "Memcache L2 backend may be unavailable.", key = %key);
         }
 
-        if let Some(ref json_val) = value {
+        if let Some(ref bytes) = value_bytes {
             // Backfill L1 on L2 hit.
             let ttl = self.strategy.to_duration();
-            let _ = self.l1_cache.set_with_ttl(key, json_val.clone(), ttl).await;
+            let _ = self.l1_cache.set_with_ttl(key, bytes, ttl).await;
         }
 
-        match value {
-            Some(json_val) => Ok(Some(json_to_vrl(json_val)?)),
+        match value_bytes {
+            Some(bytes) => {
+                let json_val: serde_json::Value = serde_json::from_slice(&bytes)
+                    .map_err(|e| CacheError::Other(format!("L2 Deserialization error: {}", e)))?;
+                Ok(Some(json_to_vrl(json_val)?))
+            }
             None => Ok(None),
         }
     }
@@ -165,12 +135,15 @@ impl CacheTable for MemcacheCacheTable {
         let ttl = strategy.to_duration();
 
         let json_val = vrl_to_json(&value)?;
+        let bytes = serde_json::to_vec(&json_val)
+            .map_err(|e| CacheError::Other(format!("Serialization error: {}", e)))?;
+
         self.l1_cache
-            .set_with_ttl(key, json_val.clone(), ttl)
+            .set_with_ttl(key, &bytes, ttl)
             .await
             .map_err(|e| CacheError::Other(e.to_string()))?;
         self.l2_cache
-            .set_with_ttl(key, json_val, ttl)
+            .set_with_ttl(key, &bytes, ttl)
             .await
             .map_err(|e| CacheError::Other(e.to_string()))?;
 

@@ -28,6 +28,10 @@ pub fn compile(mut builder: ConfigBuilder) -> Result<(Config, Vec<String>), Vec<
         errors.extend(type_errors);
     }
 
+    if let Err(cache_errors) = validation::check_caches(&builder) {
+        errors.extend(cache_errors);
+    }
+
     if let Err(type_errors) = validation::check_resources(&builder) {
         errors.extend(type_errors);
     }

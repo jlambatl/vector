@@ -21,6 +21,7 @@ pub enum CacheBackendType {
     /// Redis-backed distributed cache with in-memory L1 and Redis L2 tiers.
     Redis,
     /// Memcache-backed distributed cache with in-memory L1 and Memcache L2 tiers.
+    ///
     Memcache,
 }
 

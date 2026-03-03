@@ -79,7 +79,6 @@ impl RedisCacheTable {
 
         let cache = Arc::new(
             CacheManager::new(Arc::clone(&l1_cache), Arc::clone(&l2_cache))
-                .await
                 .map_err(|e| CacheError::Other(e.to_string()))?,
         );
 
@@ -97,7 +96,7 @@ impl CacheTable for RedisCacheTable {
     async fn get(&self, key: &str) -> CacheResult<Option<Value>> {
         let result = self
             .cache
-            .get(key)
+            .get::<serde_json::Value>(key)
             .await
             .map_err(|e| CacheError::Other(e.to_string()))?;
 
@@ -114,7 +113,7 @@ impl CacheTable for RedisCacheTable {
 
         let json_val = vrl_to_json(&value)?;
         self.cache
-            .set_with_strategy(key, json_val, strategy)
+            .set_with_strategy(key, &json_val, strategy)
             .await
             .map_err(|e| CacheError::Other(e.to_string()))
     }
